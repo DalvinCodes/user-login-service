@@ -2,7 +2,6 @@ package controller
 
 import (
 	helper "user-login-service/controller/utilities"
-	"user-login-service/domain"
 	"user-login-service/domain/dto"
 	"user-login-service/service"
 
@@ -12,6 +11,7 @@ import (
 type UserController interface {
 	Create(ctx *fiber.Ctx) error
 	GetByID(tx *fiber.Ctx) error
+	UpdatePassword(ctx *fiber.Ctx) error
 	GetByUsername(ctx *fiber.Ctx) error
 	Delete(ctx *fiber.Ctx) error
 }
@@ -26,7 +26,7 @@ func NewUserController(us service.UserService) UserController {
 
 func (c *controller) Create(ctx *fiber.Ctx) error {
 	// initializes userDTO
-	var userDTO dto.UserDTO 
+	var userDTO dto.UserDTO
 
 	// takes JSON payload, binds it to model, and validate for error
 	if err := helper.ParseAndValidatePayload(ctx, &userDTO); err != nil {
@@ -34,7 +34,7 @@ func (c *controller) Create(ctx *fiber.Ctx) error {
 	}
 
 	// maps DTOs to models
-	userResponse, user := dto.UserDTOMapper(&userDTO)
+	user := dto.UserDTOMapper(&userDTO)
 
 	// creates a new user
 	if err := c.us.Create(user); err != nil {
@@ -45,12 +45,12 @@ func (c *controller) Create(ctx *fiber.Ctx) error {
 
 	// returns the created userResponseDTO
 	return ctx.Status(fiber.StatusCreated).JSON(fiber.Map{
-		"data": userResponse,
+		"message": "user created",
 	})
 }
 
 func (c *controller) GetByID(ctx *fiber.Ctx) error {
-	//takes id field from parameters
+	//takes id field from query parameters
 	id := ctx.Query("id")
 	if id == "" {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -58,7 +58,7 @@ func (c *controller) GetByID(ctx *fiber.Ctx) error {
 		})
 	}
 
-	//searches for ID in userDB
+	//searches for ID in userDB and returns an user or an error
 	user, err := c.us.GetByID(id)
 	if err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -66,7 +66,7 @@ func (c *controller) GetByID(ctx *fiber.Ctx) error {
 			"error":   err,
 		})
 	}
-	
+
 	//maps user from db to DTO
 	dto := dto.MapUserModelToDTO(user)
 
@@ -78,15 +78,16 @@ func (c *controller) GetByID(ctx *fiber.Ctx) error {
 }
 
 func (c *controller) GetByUsername(ctx *fiber.Ctx) error {
-	
+	//takes username field from query parameters
 	username := ctx.Query("username")
-	
+
 	if username == "" {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "empty or invalid username",
 		})
 	}
 
+	//searches for username in db and returns a user of error
 	user, err := c.us.GetByUsername(username)
 	if err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -94,17 +95,21 @@ func (c *controller) GetByUsername(ctx *fiber.Ctx) error {
 		})
 	}
 
+	//maps user object to a DTO
 	userResponse := dto.MapUserModelToDTO(user)
 
+	// returns userDTO
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"data": userResponse,
 	})
 }
 
 func (c *controller) Delete(ctx *fiber.Ctx) error {
+	//takes username id form the query parameters
 	id := ctx.Query("id")
 
-	user, err := c.us.Delete(id)
+	//returns an error if user is not found or deleted
+	_, err := c.us.Delete(id)
 	if err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "error deleting user",
@@ -112,29 +117,37 @@ func (c *controller) Delete(ctx *fiber.Ctx) error {
 		})
 	}
 
-	return ctx.Status(fiber.StatusNoContent).JSON(&user)
+	//returns user deletion confirmation
+	return ctx.Status(fiber.StatusNoContent).JSON(fiber.Map{
+		"message": "user deleted",
+	})
 
 }
 
-func (c *controller) Update(ctx *fiber.Ctx) error {
-	var user *domain.User
+func (c *controller) UpdatePassword(ctx *fiber.Ctx) error {
+	//initializes UserUpdatePasswordDTO
+	var userReg *dto.UserUpdatePasswordDTO
 
+	//takes id from query parameters
 	id := ctx.Query("id")
 
-	if err := ctx.BodyParser(&user); err != nil {
+	//takes JSON payload and parses it to userReg
+	if err := ctx.BodyParser(&userReg); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": err,
 		})
 	}
 
-	user.ID = id
-	if err := c.us.Update(id, user); err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": err,
+	//updates the password with the associated ID
+	if err := c.us.UpdatePassword(id, userReg); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": err.Error(),
 		})
 	}
+
+	//returns a 200, status success if password updated in db
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "user updated",
+		"message": "user password updated",
 	})
 
 }

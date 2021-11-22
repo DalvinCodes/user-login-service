@@ -2,17 +2,20 @@ package service
 
 import (
 	"errors"
-	"github.com/google/uuid"
+	controller "user-login-service/controller/utilities"
 	"user-login-service/domain"
+	"user-login-service/domain/dto"
 	"user-login-service/pkg"
 	"user-login-service/repository"
+
+	"github.com/google/uuid"
 )
 
 type UserService interface {
 	Create(user *domain.User) error
 	GetByID(id string) (*domain.User, error)
 	GetByUsername(username string) (*domain.User, error)
-	Update(id string, user *domain.User) error
+	UpdatePassword(id string, userPasswordDTO *dto.UserUpdatePasswordDTO) error
 	Delete(id string) (*domain.User, error)
 }
 
@@ -59,8 +62,27 @@ func (s *service) GetByUsername(username string) (*domain.User, error){
 	return s.userRepo.GetByUsername(username)
 }
 
-func (s *service) Update(id string, user *domain.User) error {
-	return s.userRepo.Update(id, user)
+func (s *service) UpdatePassword(id string, userPasswordDTO *dto.UserUpdatePasswordDTO) error {
+	var user domain.User 
+
+	if id == ""  || userPasswordDTO.Password == "" {
+		return errors.New("input cannot be blank")
+	}
+	
+	if err := controller.Validate.Struct(userPasswordDTO); err != nil {
+		return err
+	}
+	
+	user.ID = id
+
+	pwd, err := s.passwordRepo.GenerateHashedPassword(userPasswordDTO.Password) 
+	if err != nil {
+		return err
+	}
+
+	user.Password = string(pwd)
+
+	return s.userRepo.UpdatePassword(id, &user)
 }
 
 func (s *service) Delete(id string) (*domain.User, error) {
