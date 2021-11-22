@@ -1,7 +1,6 @@
 package dto
 
 import (
-	"time"
 	"user-login-service/domain"
 )
 
@@ -27,16 +26,18 @@ type UserResponseDTO struct {
 	PhoneNumber string        `json:"phone_number" validate:"required,min=7"`
 	Address     []*AddressDTO `json:"address" validate:"required,dive,required"`
 	ImageUrl    string        `json:"image_url,omitempty"`
-	Active bool `json:"active" validate:"required"`
+	Active      bool          `json:"active" validate:"required"`
 }
 
-type UserCreatedDTO struct {
-	CreateAt  time.Time `json:"created_at"`
-	FirstName string    `json:"first_name" validate:"required"`
-	LastName  string    `json:"last_name" validate:"required"`
+type UserUpdatePasswordDTO struct {
+	Password string `json:"password" validate:"required,min=6"`
 }
 
-func UserDTOMapper(dto *UserDTO) (*UserCreatedDTO, *domain.User) {
+type UserUpdateAddressDTO struct {
+	Address []*AddressDTO
+}
+
+func UserDTOMapper(dto *UserDTO) *domain.User {
 
 	var uAddresses []domain.Address
 	for i := range dto.Address {
@@ -64,20 +65,13 @@ func UserDTOMapper(dto *UserDTO) (*UserCreatedDTO, *domain.User) {
 		Active:      true,
 	}
 
-	responseDTO := &UserCreatedDTO{
-		CreateAt:  time.Now(),
-		FirstName: dto.FirstName,
-		LastName:  dto.LastName,
-	}
-
-	return responseDTO, user
-
+	return user
 }
 
-func MapUserModelToDTO(user *domain.User) (userDTO UserResponseDTO){
+func MapUserModelToDTO(user *domain.User) (userDTO UserResponseDTO) {
 	var dtoAddresses []*AddressDTO
-	
-	for i := range user.Address{
+
+	for i := range user.Address {
 		var address AddressDTO
 
 		address.Line1 = user.Address[i].Line1
@@ -102,6 +96,5 @@ func MapUserModelToDTO(user *domain.User) (userDTO UserResponseDTO){
 	userDTO.ImageUrl = user.ImageUrl
 	userDTO.Active = user.Active
 
-
-	return userDTO 
+	return userDTO
 }
