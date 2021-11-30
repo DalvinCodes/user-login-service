@@ -11,8 +11,9 @@ import (
 type UserController interface {
 	Create(ctx *fiber.Ctx) error
 	GetByID(tx *fiber.Ctx) error
-	UpdatePassword(ctx *fiber.Ctx) error
 	GetByUsername(ctx *fiber.Ctx) error
+	UpdatePassword(ctx *fiber.Ctx) error
+	AddAddress(ctx *fiber.Ctx) error
 	Delete(ctx *fiber.Ctx) error
 }
 
@@ -104,26 +105,6 @@ func (c *controller) GetByUsername(ctx *fiber.Ctx) error {
 	})
 }
 
-func (c *controller) Delete(ctx *fiber.Ctx) error {
-	//takes username id form the query parameters
-	id := ctx.Query("id")
-
-	//returns an error if user is not found or deleted
-	_, err := c.us.Delete(id)
-	if err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "error deleting user",
-			"error":   err,
-		})
-	}
-
-	//returns user deletion confirmation
-	return ctx.Status(fiber.StatusNoContent).JSON(fiber.Map{
-		"message": "user deleted",
-	})
-
-}
-
 func (c *controller) UpdatePassword(ctx *fiber.Ctx) error {
 	//initializes UserUpdatePasswordDTO
 	var userReg *dto.UserUpdatePasswordDTO
@@ -148,6 +129,48 @@ func (c *controller) UpdatePassword(ctx *fiber.Ctx) error {
 	//returns a 200, status success if password updated in db
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "user password updated",
+	})
+
+}
+
+func (c *controller) AddAddress(ctx *fiber.Ctx) error {
+	var addressDTO []dto.AddressDTO
+
+	if err := ctx.BodyParser(&addressDTO); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	id := ctx.Query("id")
+
+	if err := c.us.AddAddress(id, addressDTO); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "user address updated",
+	})
+}
+
+func (c *controller) Delete(ctx *fiber.Ctx) error {
+	//takes username id form the query parameters
+	id := ctx.Query("id")
+
+	//returns an error if user is not found or deleted
+	_, err := c.us.Delete(id)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "error deleting user",
+			"error":   err,
+		})
+	}
+
+	//returns user deletion confirmation
+	return ctx.Status(fiber.StatusNoContent).JSON(fiber.Map{
+		"message": "user deleted",
 	})
 
 }
