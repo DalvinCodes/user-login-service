@@ -16,6 +16,7 @@ type UserService interface {
 	GetByID(id string) (*domain.User, error)
 	GetByUsername(username string) (*domain.User, error)
 	UpdatePassword(id string, userPasswordDTO *dto.UserUpdatePasswordDTO) error
+	AddAddress(id string, address []dto.AddressDTO) error
 	Delete(id string) (*domain.User, error)
 }
 
@@ -55,7 +56,7 @@ func (s *service) GetByID(id string) (*domain.User, error) {
 	return s.userRepo.GetByID(id)
 }
 
-func (s *service) GetByUsername(username string) (*domain.User, error){
+func (s *service) GetByUsername(username string) (*domain.User, error) {
 	if username == "" {
 		return nil, errors.New("input cannot be blank")
 	}
@@ -63,19 +64,19 @@ func (s *service) GetByUsername(username string) (*domain.User, error){
 }
 
 func (s *service) UpdatePassword(id string, userPasswordDTO *dto.UserUpdatePasswordDTO) error {
-	var user domain.User 
+	var user domain.User
 
-	if id == ""  || userPasswordDTO.Password == "" {
+	if id == "" || userPasswordDTO.Password == "" {
 		return errors.New("input cannot be blank")
 	}
-	
+
 	if err := controller.Validate.Struct(userPasswordDTO); err != nil {
 		return err
 	}
-	
+
 	user.ID = id
 
-	pwd, err := s.passwordRepo.GenerateHashedPassword(userPasswordDTO.Password) 
+	pwd, err := s.passwordRepo.GenerateHashedPassword(userPasswordDTO.Password)
 	if err != nil {
 		return err
 	}
@@ -83,6 +84,29 @@ func (s *service) UpdatePassword(id string, userPasswordDTO *dto.UserUpdatePassw
 	user.Password = string(pwd)
 
 	return s.userRepo.UpdatePassword(id, &user)
+}
+
+func (s *service) AddAddress(id string, address []dto.AddressDTO) error {
+	var user domain.User
+
+	var addresses []domain.Address
+
+	for i  := range address {
+	var	_address domain.Address
+		_address.Line1 = address[i].Line1
+		_address.Line2 = address[i].Line2
+		_address.Line3 = address[i].Line3
+		_address.City = address[i].City
+		_address.State = address[i].State
+		_address.Country = address[i].Country
+
+	addresses = append(addresses, _address)
+	}
+
+	user.Address = addresses
+
+	return s.userRepo.AddAddress(id, &user)
+
 }
 
 func (s *service) Delete(id string) (*domain.User, error) {

@@ -17,9 +17,12 @@ func SetupPostgresDatabase() (*gorm.DB, error) {
 		return nil, err
 	}
 
+	db.Exec("DROP TABLE Users, Addresses")
+	
 	if err := db.AutoMigrate(
 		// models to migrate in db
 		&domain.User{},
+		&domain.Address{},
 
 		); err != nil {
 		log.Fatalf(err.Error())
