@@ -1,14 +1,16 @@
 package routes
 
 import (
-	"user-login-service/controller"
-
 	"github.com/gofiber/fiber/v2"
+	"user-login-service/controller"
 )
 
 func LoadRoutes (app * fiber.App, ctrl controller.UserController) {
+
 	authRoutes := app.Group("/auth")
-	publicRoutes := app.Group("/public")
 	AuthRoutes(authRoutes, ctrl)
+
+
+	publicRoutes := app.Group("/public")
 	PublicRoutes(publicRoutes, ctrl)
 }

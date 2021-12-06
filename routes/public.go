@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func PublicRoutes(publicRoutes fiber.Router, ctrl controller.UserController) {
+func PublicRoutes(r fiber.Router, ctrl controller.UserController) {
+	UserPublicRoutes(r, ctrl)
 	//TODO: Implement Public Routes
 }

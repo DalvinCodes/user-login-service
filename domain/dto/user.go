@@ -29,6 +29,10 @@ type UserResponseDTO struct {
 	Active      bool          `json:"active" validate:"required"`
 }
 
+type ResponseUserForJWT struct {
+	ID       string `json:"id"`
+	Username string `json:"username"`
+}
 type UserUpdatePasswordDTO struct {
 	Password string `json:"password" validate:"required,min=6"`
 }

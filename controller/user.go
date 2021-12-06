@@ -1,11 +1,16 @@
 package controller
 
 import (
+	"io/ioutil"
+	"time"
 	helper "user-login-service/controller/utilities"
 	"user-login-service/domain/dto"
+	"user-login-service/pkg/helpers"
+	"user-login-service/pkg/middleware"
 	"user-login-service/service"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt"
 )
 
 type UserController interface {
@@ -38,11 +43,21 @@ func (c *controller) Create(ctx *fiber.Ctx) error {
 	user := dto.UserDTOMapper(&userDTO)
 
 	// creates a new user
-	if err := c.us.Create(user); err != nil {
+	responseUserJWT, err := c.us.Create(user)
+	if err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": err,
 		})
 	}
+
+	ctx.Set("id", responseUserJWT.ID)
+
+	if err := middleware.GenerateToken(ctx); err != nil {
+		return err
+	}
+
+	//removes id from header response
+	ctx.Response().Header.Del("id")
 
 	// returns the created userResponseDTO
 	return ctx.Status(fiber.StatusCreated).JSON(fiber.Map{
@@ -173,4 +188,70 @@ func (c *controller) Delete(ctx *fiber.Ctx) error {
 		"message": "user deleted",
 	})
 
+}
+
+func GenerateToken(ctx *fiber.Ctx) error {
+
+	//retrieves id string from request header and returns and error if empty
+	id := ctx.Get("id")
+	if id == "" {
+		return &fiber.Error{
+			Code:    fiber.ErrBadRequest.Code,
+			Message: "missing id string",
+		}
+	}
+
+	//retrieves token expiration time to live from env file
+	// var JWTSecretKeyExpirationTime = os.Getenv("JWT_SECRET_KEY_EXP")
+
+	// //converts time string into an int
+	// expiryTime, err := strconv.Atoi(JWTSecretKeyExpirationTime)
+	// if err != nil {
+	// 	return &fiber.Error{
+	// 		Code:    fiber.ErrInternalServerError.Code,
+	// 		Message: err.Error(),
+	// 	}
+	// }
+
+	//reads in jwt private key from pem file and returns an error
+	secretKeyFileString, err := ioutil.ReadFile(helpers.PrivateKeyFileName)
+	if err != nil {
+		return &fiber.Error{
+			Code:    fiber.ErrInternalServerError.Code,
+			Message: err.Error(),
+		}
+	}
+
+	//parse private key from pem file
+	key, err := jwt.ParseRSAPrivateKeyFromPEM(secretKeyFileString)
+	if err != nil {
+		return &fiber.Error{
+			Code:    fiber.ErrInternalServerError.Code,
+			Message: err.Error(),
+		}
+	}
+
+	//generates an unsigned token
+	token := jwt.New(jwt.SigningMethodRS256)
+
+	token.Claims = &jwt.StandardClaims{
+		Id:        id,
+		Subject:   "User Creation and Authentication Service",
+		Issuer:    "DalvinCodes",
+		Audience:  "github.com/DalvinCodes/user-login-service",
+		IssuedAt:  time.Now().Unix(),
+		ExpiresAt: time.Now().Add(time.Minute * time.Duration(-1)).Unix(),
+	}
+
+	signedToken, err := token.SignedString(key)
+	if err != nil {
+		return &fiber.Error{
+			Code:    fiber.ErrInternalServerError.Code,
+			Message: err.Error(),
+		}
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"token": "Bearer " + signedToken,
+	})
 }
