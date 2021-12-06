@@ -10,7 +10,12 @@ import (
 	"user-login-service/service"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/joho/godotenv"
 )
+
+func init() {
+	godotenv.Load()
+}
 
 func main() {
 	// set up database

@@ -12,7 +12,7 @@ import (
 )
 
 type UserService interface {
-	Create(user *domain.User) error
+	Create(user *domain.User) (*dto.ResponseUserForJWT, error)
 	GetByID(id string) (*domain.User, error)
 	GetByUsername(username string) (*domain.User, error)
 	UpdatePassword(id string, userPasswordDTO *dto.UserUpdatePasswordDTO) error
@@ -32,21 +32,26 @@ func NewUserService(userRepo repository.UserRepository, passwordRepo pkg.Passwor
 	}
 }
 
-func (s *service) Create(user *domain.User) error {
+func (s *service) Create(user *domain.User) (*dto.ResponseUserForJWT, error) {
 	// set userID
 	user.ID = uuid.New().String()
 
 	//hash user password
 	pwd, err := s.passwordRepo.GenerateHashedPassword(user.Password)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	user.Password = string(pwd)
 
 	//set status to active
 	user.Active = true
 
-	return s.userRepo.Create(user)
+	var responseUserJWT dto.ResponseUserForJWT
+
+	responseUserJWT.ID = user.ID
+	responseUserJWT.Username = user.Username
+
+	return &responseUserJWT, s.userRepo.Create(user)
 }
 
 func (s *service) GetByID(id string) (*domain.User, error) {
